@@ -1,0 +1,81 @@
+/* GENERAL */
+body {
+    font-family: 'Muli', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* NAVBAR */
+.navbar {
+    background-color: #002e5d !important;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.nav-link {
+    color: white !important;
+}
+
+.nav-link:hover {
+    color: #00c2ff !important;
+}
+
+/* HEADER */
+.page-header {
+    padding: 4rem 2rem;
+    background: linear-gradient(to right, #002e5d, #004a99);
+    color: white;
+    text-align: center;
+}
+
+/* SECTIONS */
+.section {
+    padding: 3rem 2rem;
+    max-width: 1000px;
+    margin: auto;
+}
+
+/* CARDS */
+.card-custom {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+
+/* HOBBY GRID */
+.hobby-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.hobby-item {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.hobby-item:hover {
+    transform: translateY(-5px);
+}
+
+/* FOOTER */
+footer {
+    text-align: center;
+    padding: 1rem;
+    background: #002e5d;
+    color: white;
+    margin-top: 2rem;
+}
+
+.card-custom p {
+    line-height: 1.8;
+    font-size: 1.05rem;
+    margin-bottom: 1rem;
+}

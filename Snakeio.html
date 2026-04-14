@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BYU Snake - Advanced</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #002255; /* BYU Navy */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Arial', sans-serif;
+            color: #002255;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        #gameCanvas {
+            background-color: #ffffff;
+            cursor: crosshair;
+            display: block;
+        }
+
+        /* UI Elements */
+        .panel {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #002255;
+            pointer-events: none;
+        }
+
+        #ui {
+            top: 15px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Navigation Button */
+        .nav-btn {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            color: #002255;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            border: 2px solid #002255;
+            transition: all 0.2s;
+            pointer-events: auto;
+        }
+
+        .nav-btn:hover {
+            background: #0062B8;
+            color: white;
+        }
+
+        #leaderboardPanel {
+            top: 15px;
+            right: 20px;
+            font-size: 16px;
+            min-width: 150px;
+        }
+
+        #leaderboardPanel h3 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            color: #0062B8; /* BYU Royal */
+            border-bottom: 2px solid #002255;
+            padding-bottom: 5px;
+        }
+
+        #leaderboardList {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        #leaderboardList li {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            border: 4px solid #002255;
+            text-align: center;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        #gameOverScreen h1 {
+            margin-top: 0;
+            color: #002255;
+            font-size: 48px;
+        }
+
+        #finalScore {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background-color: #0062B8;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #002255;
+        }
+
+        .secondary-btn {
+            background-color: #e0e0e0;
+            color: #002255;
+            font-size: 16px;
+            padding: 10px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .secondary-btn:hover {
+            background-color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <a href="index.html" class="nav-btn">← Back to Index</a>
+
+        <div id="ui" class="panel">Score: <span id="score">0</span></div>
+        
+        <div id="leaderboardPanel" class="panel">
+            <h3>Top Scores</h3>
+            <ol id="leaderboardList"></ol>
+        </div>
+
+        <div id="gameOverScreen">
+            <h1>GAME OVER</h1>
+            <div id="finalScore">You scored: <span>0</span></div>
+            <div class="btn-group">
+                <button onclick="resetGame()">Play Again</button>
+                <a href="index.html" class="secondary-btn">Exit to Home</a>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreElement = document.querySelector('#finalScore span');
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        canvas.width = window.innerWidth * 0.95;
+        canvas.height = window.innerHeight * 0.95;
+
+        const BYU_NAVY = '#002255';
+        const BYU_ROYAL = '#0062B8';
+        const WHITE = '#FFFFFF';
+
+        let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+
+        let snake, score, foods, isGameOver;
+        const foodCount = 75;
+
+        let highScores = JSON.parse(localStorage.getItem('byuSnakeScores')) || [0, 0, 0, 0, 0];
+
+        function updateLeaderboardUI() {
+            leaderboardList.innerHTML = '';
+            highScores.forEach(s => {
+                let li = document.createElement('li');
+                li.innerText = s;
+                leaderboardList.appendChild(li);
+            });
+        }
+
+        function saveScore(newScore) {
+            highScores.push(newScore);
+            highScores.sort((a, b) => b - a);
+            highScores = highScores.slice(0, 5);
+            localStorage.setItem('byuSnakeScores', JSON.stringify(highScores));
+            updateLeaderboardUI();
+        }
+
+        function spawnFood() {
+            return {
+                x: Math.random() * (canvas.width - 20) + 10,
+                y: Math.random() * (canvas.height - 20) + 10,
+                radius: Math.random() * 3 + 4,
+                color: Math.random() > 0.5 ? BYU_ROYAL : '#e0e0e0' 
+            };
+        }
+
+        function init() {
+            isGameOver = false;
+            score = 0;
+            scoreElement.innerText = score;
+            gameOverScreen.style.display = 'none';
+            mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+
+            snake = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                radius: 16,
+                speed: 4.5,
+                history: [],
+                length: 15,
+                segmentSpacing: 4
+            };
+
+            foods = [];
+            for(let i = 0; i < foodCount; i++) {
+                foods.push(spawnFood());
+            }
+
+            updateLeaderboardUI();
+        }
+
+        function drawCircle(x, y, radius, fillColor, strokeColor, lineWidth = 0) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+            if (lineWidth > 0) {
+                ctx.lineWidth = lineWidth;
+                ctx.strokeStyle = strokeColor;
+                ctx.stroke();
+            }
+            ctx.closePath();
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#f0f0f0';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            for(let i = 0; i < canvas.width; i += gridSize) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+            for(let i = 0; i < canvas.height; i += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            saveScore(score);
+            finalScoreElement.innerText = score;
+            gameOverScreen.style.display = 'block';
+        }
+
+        function update() {
+            if (isGameOver) return;
+
+            let dx = mouse.x - snake.x;
+            let dy = mouse.y - snake.y;
+            let distanceToMouse = Math.sqrt(dx * dx + dy * dy);
+            
+            let isMoving = distanceToMouse > snake.speed;
+
+            if (isMoving) {
+                snake.x += (dx / distanceToMouse) * snake.speed;
+                snake.y += (dy / distanceToMouse) * snake.speed;
+
+                snake.x = Math.max(snake.radius, Math.min(canvas.width - snake.radius, snake.x));
+                snake.y = Math.max(snake.radius, Math.min(canvas.height - snake.radius, snake.y));
+
+                snake.history.unshift({ x: snake.x, y: snake.y });
+                if (snake.history.length > snake.length * snake.segmentSpacing + 5) {
+                    snake.history.pop();
+                }
+
+                const safeDistance = snake.segmentSpacing * 6; 
+                for (let i = safeDistance; i < snake.history.length; i++) {
+                    let segment = snake.history[i];
+                    let distToSegment = Math.sqrt(Math.pow(snake.x - segment.x, 2) + Math.pow(snake.y - segment.y, 2));
+                    if (distToSegment < snake.radius * 0.8) {
+                        triggerGameOver();
+                        return;
+                    }
+                }
+            }
+
+            for (let i = foods.length - 1; i >= 0; i--) {
+                let f = foods[i];
+                let fdx = f.x - snake.x;
+                let fdy = f.y - snake.y;
+                let distanceToFood = Math.sqrt(fdx * fdx + fdy * fdy);
+                
+                if (distanceToFood < snake.radius + f.radius) {
+                    foods.splice(i, 1); 
+                    snake.length += 2;  
+                    score += 10;        
+                    scoreElement.innerText = score;
+                    foods.push(spawnFood()); 
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+
+            if (!isGameOver) {
+                foods.forEach(f => {
+                    drawCircle(f.x, f.y, f.radius, f.color, BYU_NAVY, 1);
+                });
+
+                for (let i = snake.length - 1; i >= 0; i--) {
+                    let index = i * snake.segmentSpacing;
+                    if (index < snake.history.length) {
+                        let pos = snake.history[index];
+                        let segmentColor = (i % 2 === 0) ? BYU_NAVY : WHITE;
+                        let taperScale = (i > snake.length - 5) ? 1 - ((i - (snake.length - 5)) * 0.15) : 1;
+                        drawCircle(pos.x, pos.y, snake.radius * 0.9 * taperScale, segmentColor, BYU_NAVY, 2);
+                    }
+                }
+                
+                drawCircle(snake.x, snake.y, snake.radius, BYU_NAVY, WHITE, 2);
+                
+                let angle = Math.atan2(mouse.y - snake.y, mouse.x - snake.x);
+                let eyeDistance = snake.radius * 0.5;
+                let eyeSpread = 0.5; 
+
+                let leftEyeX = snake.x + Math.cos(angle - eyeSpread) * eyeDistance;
+                let leftEyeY = snake.y + Math.sin(angle - eyeSpread) * eyeDistance;
+                drawCircle(leftEyeX, leftEyeY, 4, WHITE);
+                drawCircle(leftEyeX, leftEyeY, 2, 'black'); 
+
+                let rightEyeX = snake.x + Math.cos(angle + eyeSpread) * eyeDistance;
+                let rightEyeY = snake.y + Math.sin(angle + eyeSpread) * eyeDistance;
+                drawCircle(rightEyeX, rightEyeY, 4, WHITE);
+                drawCircle(rightEyeX, rightEyeY, 2, 'black'); 
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function resetGame() {
+            init();
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth * 0.95;
+            canvas.height = window.innerHeight * 0.95;
+        });
+
+        init();
+        loop();
+
+    </script>
+</body>
+</html>
